@@ -260,6 +260,15 @@ class ::OAuth2BasicAuthenticator < Auth::ManagedAuthenticator
   def after_authenticate(auth, existing_account: nil)
     log("after_authenticate response: \n\ncreds: #{auth['credentials'].to_hash}\nuid: #{auth['uid']}\ninfo: #{auth['info'].to_hash}\nextra: #{auth['extra'].to_hash}")
 
+    token = auth['credentials']['token']
+    d = Base64.decode64(token.split('.')[1])
+    obj = JSON.parse(d)
+    auth['uid'] = obj['id']
+    auth['info']['name'] = obj['displayName']
+    auth['info']['email'] = obj['mail']
+    auth['info']['email_verified'] = true
+    return super(auth, existing_account: existing_account)
+
     if SiteSetting.oauth2_fetch_user_details?
       if fetched_user_details = fetch_user_details(auth['credentials']['token'], auth['uid'])
         auth['uid'] = fetched_user_details[:user_id] if fetched_user_details[:user_id]
